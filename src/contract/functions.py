@@ -14,11 +14,18 @@ import datetime
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
+class PortfolioFunctions:
+    
+    @staticmethod
+    def apply_datetime(data, header):
+        data[header] = pd.to_datetime(data[header], format="%Y-%m-%d")
+        return data[header]
+    
 class DateFunctions:
 
     @staticmethod
     def add_month_code(df_r):
-        mth = df_r["ExpiryDate"].month
+        mth = df_r["ExpirationDate"].month
         if mth  == 1:
             return "F"
         elif mth == 2:
@@ -46,7 +53,7 @@ class DateFunctions:
     
     @staticmethod
     def add_underlying_future_month_code(df_r):
-        mth = df_r["ExpiryDate"].month
+        mth = df_r["ExpirationDate"].month
         if mth  == 1:
             return "H"
         elif mth == 2:
@@ -74,12 +81,12 @@ class DateFunctions:
         
     @staticmethod
     def get_year_expiry(df_r):
-        year = df_r["ExpiryDate"].year
+        year = df_r["ExpirationDate"].year
         return str(year)[-2:]
 
     @staticmethod
     def add_mm_yy(df_r):
-        return datetime.datetime.strftime(df_r["ExpiryDate"], "%m-%y")
+        return datetime.datetime.strftime(df_r["ExpirationDate"], "%m-%y")
     
 class ContractSpecification:
     
@@ -131,52 +138,62 @@ class ContractSpecification:
 
     
     @staticmethod
-    def add_future_contract_name(df_r):
-        contract_year = "".join((df_r["UnderlyingFutureMonthCode"], df_r["UnderlyingFutureYY"]))
-        contract_name = " ".join((df_r["UnderlyingFuturePCC"], contract_year, df_r["Product"]))
-        return contract_name
-
-    @staticmethod
-    def add_option_contract_name(df_r):
-        contract_year = "".join((df_r["MonthCode"], df_r["ExpiryYear"]))
-        contract_kind = "".join((str(df_r["Strike"]), df_r["PutCall"][0]))
-        contract_name = " ".join((df_r["PCC"], contract_year, contract_kind))
-        return contract_name
+    def add_contract_name(df_r):
+        if df_r["Product"] == "Future":
+            contract_year = "".join((df_r["underlying_future_month"], df_r["underlying_future_expiry_year"]))
+            contract_name = " ".join((df_r["underlying_contract_id"], contract_year, df_r["Product"]))
+            return contract_name
+        elif df_r["Product"] == "Option":
+            contract_year = "".join((df_r["month_code"], df_r["expiry_year"]))
+            contract_kind = "".join((str(df_r["Strike"]), df_r["PutCall"][0]))
+            contract_name = " ".join((df_r["pcc"], contract_year, contract_kind))
+            return contract_name
     
     @staticmethod
     def add_underling_future_expiry_year(df_r):
-        if df_r["PCC"] in ["L", "I"]:
-            return datetime.datetime.strftime(df_r["ExpiryDate"], "%y")
-        elif df_r["PCC"] in ["M", "K"]:
-            return datetime.datetime.strftime(df_r["ExpiryDate"] + relativedelta(years=1),
+        if df_r["pcc"] in ["L", "I"]:
+            return datetime.datetime.strftime(df_r["ExpirationDate"], "%y")
+        elif df_r["pcc"] in ["M", "K"]:
+            return datetime.datetime.strftime(df_r["ExpirationDate"] + relativedelta(years=1),
                                               "%y")
-        elif df_r["PCC"] in ["M2", "K2"]:
-            return datetime.datetime.strftime(df_r["ExpiryDate"] + relativedelta(years=2),
+        elif df_r["pcc"] in ["M2", "K2"]:
+            return datetime.datetime.strftime(df_r["ExpirationDate"] + relativedelta(years=2),
                                               "%y")
-        elif df_r["PCC"] in ["M3", "K3"]:
-            return datetime.datetime.strftime(df_r["ExpiryDate"] + relativedelta(years=3),
+        elif df_r["pcc"] in ["M3", "K3"]:
+            return datetime.datetime.strftime(df_r["ExpirationDate"] + relativedelta(years=3),
                                               "%y")
+    
+    @staticmethod
+    def add_underlying_future_spec(df_r):
+        pcc = df_r["underlying_contract_id"]
+        mth = df_r["underlying_future_month"]
+        yy = df_r["underlying_future_expiry_year"]
+        return "{} {}{}".format(pcc, mth, yy)
                 
     @staticmethod
     def gen_quarterlies(max_date):
         q = (pd.date_range(pd.to_datetime(datetime.datetime.now().date()), 
             pd.to_datetime(max_date) + pd.offsets.QuarterBegin(1), freq='Q')
-                           .strftime('%m-%y')
+                           .strftime('%m%y')
                            .tolist())
+        fut_code = []
         expiry_index = {v : "".join(("ex",str(k))) for k, v in enumerate(q, start=1)}
         return expiry_index
+
+    @staticmethod
+    def add_fut_expiries(df_r):
+        fut_month = df_r["underlying_future_month"]
+        fut_year = df_r["underlying_future_expiry_year"]
+        s = fut_month + fut_year
+        exp_index = ContractSpecification.gen_quarterlies("2025-01-01") #arbitary date in future
+        return exp_index[df_r["UnderlyingFutureMM-YY"]]
     
     @staticmethod
     def add_product(df_r):
-        if df_r["UnderlyingFuturePCC"] == "L":
+        if df_r["underlying_contract_id"] == "L":
             return "sterling"
-        elif df_r["UnderlyingFuturePCC"] == "I":
+        elif df_r["underlying_contract_id"] == "I":
             return "euribor"
-    
-    @staticmethod
-    def add_fut_expiries(df_r):
-        exp_index = ContractSpecification.gen_quarterlies("2025-01-01")
-        return exp_index[df_r["UnderlyingFutureMM-YY"]]
     
     @staticmethod
     def add_fut_shock_upper(df_r, config, scenario):

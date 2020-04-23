@@ -1,0 +1,49 @@
+{
+	"log": {
+		"version": 1,
+		"disable_existing_loggers": true,
+		"formatters": {
+			"portfolio_risk_formatter": {
+				"format": "%(asctime)s - %(levelname)s : %(message)s",
+				"datefmt": "%Y%m%d %H:%M:%S"
+			}
+		},
+		"handlers": {
+			"consolehandler": {
+				"class": "logging.StreamHandler",
+				"level": "DEBUG",
+				"formatter": "portfolio_risk_formatter",
+				"stream": "ext://sys.stdout"
+			}
+		},
+		"loggers": {
+			"portfolio_risk": {
+				"level": "DEBUG",
+				"handlers": [
+					"consolehandler"
+				],
+				"qualname": "CQF",
+				"propagate": "no"
+			}
+		}
+	},
+	"db": {
+		"arc": {
+			"dbms": "mssql",
+			"connector": "pymssql",
+			"host": "192.168.118.50\\SQLEXPRESS",
+			"db_name": "Act-Arc",
+			"su_user": "sa",
+			"su_password": "atlantic,1"
+		},
+		"tuco": {
+			"dbms": "mssql",
+			"connector": "pymssql",
+			"host": "192.168.118.50\\SQLEXPRESS",
+			"db_name": "Abn",
+			"su_user": "sa",
+			"su_password": "atlantic,1"
+		}
+	}
+}
+
