@@ -3,6 +3,7 @@ Created on 20 Apr 2020
 
 @author: root
 '''
+import numpy as np
 import pandas as pd
 from model.db import DatabaseManager
 from configuration import ConfigurationFactory
@@ -51,11 +52,14 @@ class PortfolioManager:
         self.add_data_param(portfolio_name, "underlying_future_month", DateFunctions.add_underlying_future_month_code)
         self.add_data_param(portfolio_name, "underlying_future_expiry_year", ContractSpecification.add_underling_future_expiry_year)
         self.add_data_param(portfolio_name, "underlying_future_id", ContractSpecification.add_underlying_future_spec)
+        
         #add contract id here
         self.add_data_param(portfolio_name, "contract_id", ContractSpecification.add_contract_name)
         
         #generate quarterly expiry tags here - add arbitary date in the future to generate labels up to that date
-#         self.add_data_param(portfolio_name, "expiry_id", ContractSpecification.add_fut_expiries)
+        self.add_data_param(portfolio_name, "future_mm", DateFunctions.add_underlying_future_month)
+        self.add_data_param(portfolio_name, "underlying_future_mmyy", ContractSpecification.add_underlying_future_mmyy)
+        self.add_data_param(portfolio_name, "expiry_id", ContractSpecification.add_fut_expiries)
         
     def merge_portfolio(self, merged_portfolio_name=None, portfolio_a=None, portfolio_b=None):
         tmp = pd.merge(getattr(self, portfolio_a), getattr(self, portfolio_b)[["Delta", "Gamma", "Theta", "Vega", "ActualVolatility", "contract_id"]],
@@ -72,9 +76,14 @@ class PortfolioManager:
         sterling_tmp["nGamma"] = sterling_tmp["Gamma"] * sterling_tmp["Position"]
         sterling_tmp["nTheta"] = sterling_tmp["Theta"] * sterling_tmp["Position"] * 100
         sterling_tmp["nVega"] = sterling_tmp["Vega"] * sterling_tmp["Position"] * 10
-        sterling_tmp.drop(labels=["ActualVolatility", "Delta", "Gamma", "Position", "Strike", "Theta", "Vega"], axis=1, inplace=True)
-        sterling_tmp = sterling_tmp.groupby(["underlying_future_id"]).sum()
-        sterling_tmp = sterling_tmp.pivot_table(index='underlying_future_id', margins=True, margins_name='Total', aggfunc=sum)
+        
+        ##sterling pivot table
+        sterling_tbl = pd.pivot_table(sterling_tmp, values=["nDelta", "nGamma", "nTheta", "nVega"], index=["expiry_id", "underlying_future_id"],
+                                      aggfunc=np.sum, fill_value=0)
+        #add the totals row
+        stl_res = sterling_tbl.pivot_table(index=['expiry_id', 'underlying_future_id'], margins=True, margins_name='Total', aggfunc=sum)
+#         stl_res = sterling_tbl.sort_values('expiry_id', ascending=False)
+
         
         
         #euribor portfolio
@@ -83,14 +92,16 @@ class PortfolioManager:
         euribor_tmp["nGamma"] = euribor_tmp["Gamma"] * euribor_tmp["Position"]
         euribor_tmp["nTheta"] = euribor_tmp["Theta"] * euribor_tmp["Position"] * 100
         euribor_tmp["nVega"] = euribor_tmp["Vega"] * euribor_tmp["Position"] * 10
-        euribor_tmp.drop(labels=["ActualVolatility", "Delta", "Gamma", "Position", "Strike", "Theta", "Vega"], axis=1, inplace=True)
-        euribor_tmp = euribor_tmp.groupby(["underlying_future_id"]).sum()
-        euribor_tmp = euribor_tmp.pivot_table(index='underlying_future_id', margins=True, margins_name='Total', aggfunc=sum)
-        
+
+        ##euribor pivot table
+        ebor_tbl = pd.pivot_table(euribor_tmp, values=["nDelta", "nGamma", "nTheta", "nVega"], index=["expiry_id", "underlying_future_id"],
+                                      aggfunc=np.sum, fill_value=0)
+        #add the totals row
+        ebor_res = ebor_tbl.pivot_table(index=['expiry_id', 'underlying_future_id'], margins=True, margins_name='Total', aggfunc=sum)
         
         #temp append pivot to see what output looks like
-        setattr(self, "{}_{}".format(live_risk_name, "sterling"), sterling_tmp)
-        setattr(self, "{}_{}".format(live_risk_name, "euribor"), euribor_tmp)
+        setattr(self, "{}_{}".format(live_risk_name, "sterling"), stl_res)
+        setattr(self, "{}_{}".format(live_risk_name, "euribor"), ebor_res)
   
 
 

@@ -78,6 +78,34 @@ class DateFunctions:
             return "Z"
         elif mth == 12:
             return "Z"
+
+    @staticmethod
+    def add_underlying_future_month(df_r):
+        mth = df_r["ExpirationDate"].month
+        if mth  == 1:
+            return 3
+        elif mth == 2:
+            return 3
+        elif mth == 3:
+            return 3
+        elif mth == 4:
+            return 6
+        elif mth == 5:
+            return 6
+        elif mth == 6:
+            return 6
+        elif mth == 7:
+            return 9
+        elif mth == 8:
+            return 9
+        elif mth == 9:
+            return 9
+        elif mth == 10:
+            return 12
+        elif mth == 11:
+            return 12
+        elif mth == 12:
+            return 12
         
     @staticmethod
     def get_year_expiry(df_r):
@@ -176,18 +204,23 @@ class ContractSpecification:
             pd.to_datetime(max_date) + pd.offsets.QuarterBegin(1), freq='Q')
                            .strftime('%m%y')
                            .tolist())
-        fut_code = []
         expiry_index = {v : "".join(("ex",str(k))) for k, v in enumerate(q, start=1)}
         return expiry_index
-
+    
+    @staticmethod
+    def add_underlying_future_mmyy(df_r):
+        if len(str(df_r["future_mm"])) == 1:
+            s = "0" + str(df_r["future_mm"]) + str(df_r["underlying_future_expiry_year"])
+        else:
+            s = str(df_r["future_mm"]) + str(df_r["underlying_future_expiry_year"])
+        return s
+    
     @staticmethod
     def add_fut_expiries(df_r):
-        fut_month = df_r["underlying_future_month"]
-        fut_year = df_r["underlying_future_expiry_year"]
-        s = fut_month + fut_year
         exp_index = ContractSpecification.gen_quarterlies("2025-01-01") #arbitary date in future
-        return exp_index[df_r["UnderlyingFutureMM-YY"]]
-    
+        exp_id = int(exp_index[df_r["underlying_future_mmyy"]].replace('ex', ''))  #note this gives us "ex1" "ex2" etc. so we remove it and convert to int
+        return exp_id
+        
     @staticmethod
     def add_product(df_r):
         if df_r["underlying_contract_id"] == "L":
