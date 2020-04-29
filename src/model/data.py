@@ -74,7 +74,7 @@ class PortfolioManager:
         sterling_tmp = tmp[tmp["underlying_product"] == "sterling"]
         sterling_tmp["nDelta"] = sterling_tmp["Delta"] * sterling_tmp["Position"]
         sterling_tmp["nGamma"] = sterling_tmp["Gamma"] * sterling_tmp["Position"]
-        sterling_tmp["nTheta"] = sterling_tmp["Theta"] * sterling_tmp["Position"] * 100
+        sterling_tmp["nTheta"] = sterling_tmp["Theta"] * sterling_tmp["Position"] * 1000
         sterling_tmp["nVega"] = sterling_tmp["Vega"] * sterling_tmp["Position"] * 10
         
         ##sterling pivot table
@@ -82,15 +82,12 @@ class PortfolioManager:
                                       aggfunc=np.sum, fill_value=0)
         #add the totals row
         stl_res = sterling_tbl.pivot_table(index=['expiry_id', 'underlying_future_id'], margins=True, margins_name='Total', aggfunc=sum)
-#         stl_res = sterling_tbl.sort_values('expiry_id', ascending=False)
-
-        
-        
+        stl_res = stl_res.round(0)
         #euribor portfolio
         euribor_tmp = tmp[tmp["underlying_product"] == "euribor"]
         euribor_tmp["nDelta"] = euribor_tmp["Delta"] * euribor_tmp["Position"]
         euribor_tmp["nGamma"] = euribor_tmp["Gamma"] * euribor_tmp["Position"]
-        euribor_tmp["nTheta"] = euribor_tmp["Theta"] * euribor_tmp["Position"] * 100
+        euribor_tmp["nTheta"] = euribor_tmp["Theta"] * euribor_tmp["Position"] * 1000
         euribor_tmp["nVega"] = euribor_tmp["Vega"] * euribor_tmp["Position"] * 10
 
         ##euribor pivot table
@@ -98,7 +95,7 @@ class PortfolioManager:
                                       aggfunc=np.sum, fill_value=0)
         #add the totals row
         ebor_res = ebor_tbl.pivot_table(index=['expiry_id', 'underlying_future_id'], margins=True, margins_name='Total', aggfunc=sum)
-        
+        ebor_res = ebor_res.round(0)
         #temp append pivot to see what output looks like
         setattr(self, "{}_{}".format(live_risk_name, "sterling"), stl_res)
         setattr(self, "{}_{}".format(live_risk_name, "euribor"), ebor_res)
