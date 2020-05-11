@@ -21,6 +21,15 @@ class PortfolioFunctions:
         data[header] = pd.to_datetime(data[header], format="%Y-%m-%d")
         return data[header]
     
+    @staticmethod
+    def compute_spread_to_exchange(df_r):
+        if df_r["PutCall"] in ["Put", "Call"]:
+            #Compute spread
+            spread = (df_r["Theo"] - df_r["SettlementPrice"]) * df_r["Position"] * df_r["Multiplier"]
+        else:
+            spread = 0
+        return spread
+    
 class DateFunctions:
 
     @staticmethod

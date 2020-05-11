@@ -1,5 +1,5 @@
 select con.Product, con.ExpirationDate, con.Symbol, con.Strike, con.PutCall, con.Name, pos.[Position], calc.Theo, calc.Delta, calc.Gamma,
-calc.Theta, calc.Vega, calc.ImpliedVolatility, calc.ActualVolatility, calc.TimeToExpiry
+calc.Theta, calc.Vega, calc.ImpliedVolatility, calc.ActualVolatility, calc.TimeToExpiry, con.Multiplier
 from Abn.dbo.Contracts as con
 left outer join Abn.dbo.Positions as pos on pos.FkContractId = con.Id
 left outer join [Act-Arc].dbo.Calculations as calc on con.Id = calc.FkContractId

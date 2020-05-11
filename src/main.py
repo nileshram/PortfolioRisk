@@ -9,6 +9,7 @@ import json
 import logging.config
 
 from model.data import PortfolioManager
+import pandas as pd
 
 def _configure_log():
     logconfjson = os.path.join("conf", "log_config.json")
@@ -25,7 +26,10 @@ if __name__ == "__main__":
     log.info("Starting risk application")
     try:
         p = PortfolioManager(portfolio_name="tuco", params_portfolio="arc")
-        print(p.tuco.head())
-        print(p.arc.head())
+        
+        #write to excel
+        writer = pd.ExcelWriter(os.path.dirname(__file__), engine = 'xlsxwriter')
+        p.live_risk_sterling.to_excel("sterling.xlsx")
+        p.live_risk_euribor.to_excel("euribor.xlsx")
     except Exception as e:
         print(e)

@@ -62,36 +62,39 @@ class PortfolioManager:
         self.add_data_param(portfolio_name, "expiry_id", ContractSpecification.add_fut_expiries)
         
     def merge_portfolio(self, merged_portfolio_name=None, portfolio_a=None, portfolio_b=None):
-        tmp = pd.merge(getattr(self, portfolio_a), getattr(self, portfolio_b)[["Delta", "Gamma", "Theta", "Vega", "ActualVolatility", "contract_id"]],
+        tmp = pd.merge(getattr(self, portfolio_a), getattr(self, portfolio_b)[["Delta", "Gamma", "Theta", "Vega", "Theo", "Multiplier", "ActualVolatility", "contract_id"]],
                        on=["contract_id"], how="left")
         tmp = tmp.drop_duplicates()
         setattr(self, merged_portfolio_name, tmp)
     
     def create_live_risk(self, live_risk_name=None, portfolio_name=None):
         tmp = getattr(self, portfolio_name)
-        
+
         #sterling portfolio
         sterling_tmp = tmp[tmp["underlying_product"] == "sterling"]
         sterling_tmp["nDelta"] = sterling_tmp["Delta"] * sterling_tmp["Position"]
         sterling_tmp["nGamma"] = sterling_tmp["Gamma"] * sterling_tmp["Position"]
         sterling_tmp["nTheta"] = sterling_tmp["Theta"] * sterling_tmp["Position"] * 1000
         sterling_tmp["nVega"] = sterling_tmp["Vega"] * sterling_tmp["Position"] * 10
-        
+        sterling_tmp["spread"] = sterling_tmp.apply(lambda x: PortfolioFunctions.compute_spread_to_exchange(x), axis=1)
+
         ##sterling pivot table
-        sterling_tbl = pd.pivot_table(sterling_tmp, values=["nDelta", "nGamma", "nTheta", "nVega"], index=["expiry_id", "underlying_future_id"],
+        sterling_tbl = pd.pivot_table(sterling_tmp, values=["nDelta", "nGamma", "nTheta", "nVega", "spread"], index=["expiry_id", "underlying_future_id"],
                                       aggfunc=np.sum, fill_value=0)
         #add the totals row
         stl_res = sterling_tbl.pivot_table(index=['expiry_id', 'underlying_future_id'], margins=True, margins_name='Total', aggfunc=sum)
         stl_res = stl_res.round(0)
+        
         #euribor portfolio
         euribor_tmp = tmp[tmp["underlying_product"] == "euribor"]
         euribor_tmp["nDelta"] = euribor_tmp["Delta"] * euribor_tmp["Position"]
         euribor_tmp["nGamma"] = euribor_tmp["Gamma"] * euribor_tmp["Position"]
         euribor_tmp["nTheta"] = euribor_tmp["Theta"] * euribor_tmp["Position"] * 1000
         euribor_tmp["nVega"] = euribor_tmp["Vega"] * euribor_tmp["Position"] * 10
+        euribor_tmp["spread"] = euribor_tmp.apply(lambda x: PortfolioFunctions.compute_spread_to_exchange(x), axis=1)
 
         ##euribor pivot table
-        ebor_tbl = pd.pivot_table(euribor_tmp, values=["nDelta", "nGamma", "nTheta", "nVega"], index=["expiry_id", "underlying_future_id"],
+        ebor_tbl = pd.pivot_table(euribor_tmp, values=["nDelta", "nGamma", "nTheta", "nVega", "spread"], index=["expiry_id", "underlying_future_id"],
                                       aggfunc=np.sum, fill_value=0)
         #add the totals row
         ebor_res = ebor_tbl.pivot_table(index=['expiry_id', 'underlying_future_id'], margins=True, margins_name='Total', aggfunc=sum)
